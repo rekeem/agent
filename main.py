@@ -24,36 +24,44 @@ def main():
     messages: list[types.Content] = [
         types.Content(role="user", parts=[types.Part(text=args.user_prompt)])
     ]
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            tools=[available_functions]
+    for _ in range(20):
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=messages,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                tools=[available_functions]
+            )
         )
-    )
-    if response.usage_metadata is None:
-        raise RuntimeError("usage metadata is missing from response")
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
-    if response.function_calls:
-        function_call_results=[]
-        for function_call in response.function_calls:
-            result =call_function(function_call)
-            if (not result.parts) or (len(result.parts)==0):
-                raise Exception("function call result is missing parts")
-            if not result.parts[0].function_response:
-                raise Exception("function call result is missing function response")
-            if not result.parts[0].function_response.response:
-                raise Exception("function call result is missing function response content")
-            function_call_results.append(result.parts[0])
-            if args.verbose:
-                print(f"-> {result.parts[0].function_response.response}")
-        print(response.text)
-
+        if response.usage_metadata is None:
+            raise RuntimeError("usage metadata is missing from response")
+        if args.verbose:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+            print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.content:
+                    messages.append(candidate.content)
+        if response.function_calls:
+            function_call_results=[]
+            for function_call in response.function_calls:
+                result =call_function(function_call)
+                if (not result.parts) or (len(result.parts)==0):
+                    raise Exception("function call result is missing parts")
+                if not result.parts[0].function_response:
+                    raise Exception("function call result is missing function response")
+                if not result.parts[0].function_response.response:
+                    raise Exception("function call result is missing function response content")
+                function_call_results.append(result.parts[0])
+                if args.verbose:
+                    print(f"-> {result.parts[0].function_response.response}")
+            messages.append(types.Content(role="user", parts=function_call_results))
+        else:
+            print(response.text)
+            return
+    print("Reached maximum number of iterations without completing the function call plan.")
+    exit(1)
 
 if __name__ == "__main__":
     main()

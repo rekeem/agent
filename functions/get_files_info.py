@@ -12,14 +12,16 @@ def get_files_info(working_directory: str, directory: str = ".") -> str:
             return f'Error: "{directory}" is not a directory'
         files = []
         direct = "current" if directory == "." else directory
-        print(f"Result for {direct} directory:")
+        result = f"Result for {direct} directory:"
+        #print(f"Result for {direct} directory:")
         for item in os.listdir(target_dir):
             item_path = os.path.join(target_dir, item)
             is_dir = False
             if os.path.isdir(item_path):
                 is_dir = True
-            print(f"    - {item}: file_size={os.path.getsize(item_path)}, is_dir={is_dir}")
-        return "Success"
+            result += f"\n    - {item}: file_size={os.path.getsize(item_path)}, is_dir={is_dir}"
+            #print(f"    - {item}: file_size={os.path.getsize(item_path)}, is_dir={is_dir}")
+        return result
     except Exception as e:
         return f'Error: {e}'
 
